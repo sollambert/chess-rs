@@ -1,10 +1,6 @@
-mod board;
-mod game;
-mod pieces;
-
 #[cfg(test)]
 mod tests {
-    use crate::{board::{Board, BoardPerspective, Color, Coordinate, File, Rank, Square}, game::{self, Game, Move, MoveType}, pieces::{Piece, PieceType}};
+    use crate::{board::{Board, BoardPerspective}, game::{Game, Move}, pieces::{Piece, PieceType}};
 
     #[test]
     fn init_board() {
@@ -31,10 +27,9 @@ mod tests {
             Err(err) => panic!("{}", err),
         };
         let player = &mut game.players.0;
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
 
@@ -47,10 +42,9 @@ mod tests {
             Err(err) => panic!("{}", err),
         };
         let player = &mut game.players.0;
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         print!("Can Passant: {}", board.can_passant.unwrap());
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -70,10 +64,10 @@ mod tests {
         let player = &mut game.players.0;
         let player2 = &mut game.players.1;
         board.squares[3][3].piece = Some(Piece::new(player2.color, PieceType::Pawn));
-        let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::White));
+        let _ = board.execute_move(chess_move, player);
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move2, player2);
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player2.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
 
@@ -87,10 +81,9 @@ mod tests {
         };
         let player = &mut game.players.0;
         board.squares[1][1].piece = None;
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
 
@@ -103,10 +96,9 @@ mod tests {
             Err(err) => panic!("{}", err),
         };
         let player = &mut game.players.0;
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
 
@@ -114,16 +106,15 @@ mod tests {
     fn valid_rook_move() {
         let mut game = Game::new(3600);
         let mut board = game.board;
-        let chess_move = match Move::try_from("Ra1a6") {
+        let chess_move = match Move::try_from("Ra1a7") {
             Ok(cm) => cm,
             Err(err) => panic!("{}", err),
         };
         let player = &mut game.players.0;
         board.squares[1][0].piece = None;
+        print!("{}", board.to_string(player.color.into()));
         let move_result = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
 
@@ -141,10 +132,9 @@ mod tests {
             color: player.color(),
             piece_type: PieceType::Pawn,
         });
+        print!("{}", board.to_string(player.color.into()));
         let executed_move = board.execute_move(chess_move, player);
-        print!("{}", board.to_string(BoardPerspective::Black));
-        print!("\n");
-        print!("{}", board.to_string(BoardPerspective::White));
+        print!("{}", board.to_string(player.color.into()));
         assert!(executed_move.is_ok(), "{}", executed_move.unwrap_err().as_str());
     }
 }

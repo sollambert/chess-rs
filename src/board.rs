@@ -93,7 +93,6 @@ impl Board {
 							file: chess_move.to.file,
 						},
 					};
-					println!("Passant Pawn: {}", passant_pawn_coord);
 					if chess_move.to == self.can_passant.unwrap() {
 						self.get_square_mut(passant_pawn_coord).piece = None;
 					}
@@ -234,7 +233,6 @@ impl Board {
 						file,
 						rank
 					};
-					println!("{}", coord);
 					Some(coord)
 				}).filter(|coord| coord.is_some()).map(|coord| coord.unwrap()).collect();
 				let target_coord = valid_coords.iter().find(|coord| **coord == chess_move.to);
@@ -250,12 +248,10 @@ impl Board {
 				let check_coord = |distance| {
 					let file_distance = if direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
 					let rank_distance = if !direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
-					println!("File Dist: {}, rank dist: {}", file_distance, rank_distance);
 					let coord = Coordinate {
 						file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
 						rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
 					};
-					println!("Check Coord: {}", coord);
 					self.get_square(coord).piece.is_some()
 				};
 				for distance in 1..i32::abs(file_diff) {
@@ -328,6 +324,15 @@ impl Default for Board {
 pub enum BoardPerspective {
 	White,
 	Black
+}
+
+impl From<Color> for BoardPerspective {
+	fn from(value: Color) -> Self {
+		match value {
+			Color::White => Self::White,
+			Color::Black => Self::Black,
+		}
+	}
 }
 
 pub struct Square {
