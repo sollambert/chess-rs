@@ -68,7 +68,7 @@ impl Board {
 	pub fn get_square_mut(&mut self, coordinate: Coordinate) -> &mut Square {
 		&mut self.squares[coordinate.rank as usize][coordinate.file as usize]
 	}
-	pub fn execute_move(&mut self, chess_move: Move, player: &mut Player) -> Result<(), MoveError> {
+	pub fn execute_move(&mut self, chess_move: &Move, player: &mut Player) -> Result<(), MoveError> {
         let valid = self.validate_move(&chess_move, player);
 		if valid.is_err() {return valid;}
 		let mut piece_type = chess_move.piece_type;

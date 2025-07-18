@@ -1,11 +1,14 @@
 use std::fmt;
 
+use text_io::read;
+
 use crate::{board::{Board, Color, Coordinate, File, Rank}, pieces::PieceType};
 
 pub struct Game {
 	pub board: Board,
 	pub turns: Vec<Turn>,
-	pub players: (Player, Player)
+	pub players: (Player, Player),
+	pub winner: Option<Color>
 }
 
 impl Game {
@@ -26,8 +29,93 @@ impl Game {
 		Self {
 			board: Board::default(),
 			turns: Vec::<Turn>::new(),
-			players: (Player::new(Color::White, time), Player::new(Color::Black, time))
+			players: (Player::new(Color::White, time), Player::new(Color::Black, time)),
+			winner: None,
 		}
+	}
+	pub fn start(&mut self) {
+		loop {
+			let mut new_turn = Turn(None, None);
+			let board = &mut self.board;
+			let (white, black) = &mut self.players;
+
+			let white_king = board.squares.iter().any(|rank| rank.iter().any(|sq| {
+				if let Some(piece) = &sq.piece {
+					if piece.piece_type == PieceType::King && piece.color == Color::White {
+						return true;
+					}
+				}
+				false
+			}));
+			if !white_king {
+				self.winner = Some(black.color);
+				break;
+			}
+			loop {
+				println!("{}", (*board).to_string(white.color.into()));
+				print!("Enter move for white: ");
+				let white_input: String = read!();
+				let white_move = Move::try_from(white_input.as_str());
+				match white_move {
+					Ok(chess_move) => {
+						match board.execute_move(&chess_move, white) {
+								Ok(_) => {
+									new_turn.0 = Some(chess_move);
+									break;
+								},
+								Err(err) => {
+									println!("{}", err.as_str());
+									continue;
+								},
+							}
+					},
+					Err(_) => {
+						println!("Sorry, we couldn't parse that notation");
+						continue;
+					},
+				}
+			}
+
+			let black_king = board.squares.iter().any(|rank| rank.iter().any(|sq| {
+				if let Some(piece) = &sq.piece {
+					if piece.piece_type == PieceType::King && piece.color == Color::Black {
+						return true;
+					}
+				}
+				false
+			}));
+			if !black_king {
+				self.winner = Some(white.color);
+				break;
+			}
+			loop {
+				println!("{}", (*board).to_string(black.color.into()));
+				print!("Enter move for black: ");
+				let black_input: String = read!();
+				let black_move = Move::try_from(black_input.as_str());
+				match black_move {
+					Ok(chess_move) => {
+						match board.execute_move(&chess_move, black) {
+								Ok(_) => {
+									new_turn.1 = Some(chess_move);
+									break;
+								},
+								Err(err) => {
+									println!("{}", err.as_str());
+									continue;
+								},
+							}
+					},
+					Err(_) => {
+						println!("Sorry, we couldn't parse that notation");
+						continue;
+					},
+				}
+			}
+			self.turns.push(new_turn);
+			println!("{}", self.turns_to_string());
+		}
+		println!("{} wins the game!", self.winner.unwrap());
 	}
 }
 
@@ -219,7 +307,7 @@ pub struct Turn(Option<Move>, Option<Move>);
 
 impl fmt::Display for Turn {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{}, {}",
+		write!(f, "{} {}",
 			self.0.clone().unwrap_or(Move::default()).notation,
 			self.1.clone().unwrap_or(Move::default()).notation
 		)

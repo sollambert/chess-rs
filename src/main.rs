@@ -1,3 +1,5 @@
+use text_io::read;
+
 use crate::game::Game;
 
 mod board;
@@ -7,5 +9,8 @@ mod tests;
 
 
 fn main() {
-    let mut game = Game::new(3600);
+    print!("Welcome to Chess-rs, please enter desired game time in seconds:");
+    let time: u32 = read!();
+    let mut game = Game::new(time);
+    game.start()
 }
