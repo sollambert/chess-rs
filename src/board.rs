@@ -29,6 +29,7 @@ impl From<Color> for char {
     }
 }
 
+#[derive(Clone)]
 pub struct Board {
     pub squares: [[Square; 8]; 8],
 	pub can_passant: Option<Coordinate>,
@@ -384,6 +385,7 @@ impl From<Color> for BoardPerspective {
 	}
 }
 
+#[derive(Clone)]
 pub struct Square {
     pub coordinate: Coordinate,
     pub piece: Option<Piece>,

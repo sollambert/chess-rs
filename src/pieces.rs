@@ -16,6 +16,7 @@ const B_BISHOP: char = '♝';
 const B_KNIGHT: char = '♞';
 const B_PAWN: char = '♟';
 
+#[derive(Clone)]
 pub struct Piece {
 	pub color: Color,
 	pub piece_type: PieceType,
