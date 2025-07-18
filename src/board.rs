@@ -266,8 +266,57 @@ impl Board {
 				}
 			},
 			PieceType::Queen => {
+				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
+				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
+				if file_diff == 0 || rank_diff == 0 {
+					let direction: (bool, bool) = (file_diff != 0, file_diff > 0 || rank_diff > 0 );
+					if file_diff * rank_diff != 0 {
+						return Err(MoveError::Invalid);
+					}
+					let check_coord = |distance| {
+						let file_distance = if direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
+						let rank_distance = if !direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
+						let coord = Coordinate {
+							file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
+							rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
+						};
+						self.get_square(coord).piece.is_some()
+					};
+					for distance in 1..i32::abs(file_diff) {
+						if check_coord(distance) {
+							return Err(MoveError::Blocked);
+						}
+					}
+					for distance in 1..i32::abs(rank_diff) {
+						if check_coord(distance) {
+							return Err(MoveError::Blocked);
+						}
+					}
+				} else {
+					let direction: (bool, bool) = (file_diff > 0, rank_diff > 0);
+					if file_diff != rank_diff && file_diff != rank_diff * -1 {
+						return Err(MoveError::Invalid);
+					}
+					for distance in 1..i32::abs(file_diff) {
+						let file_distance = if direction.0 { distance } else { distance * -1 };
+						let rank_distance = if direction.1 { distance } else { distance * -1 };
+						let check_coord = Coordinate {
+							file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
+							rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
+						};
+						let check_occupied = self.get_square(check_coord).piece.is_some();
+						if check_occupied {
+							return Err(MoveError::Blocked);
+						}
+					}
+				}
 			},
 			PieceType::King => {
+				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
+				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
+				if file_diff > 1 || rank_diff > 1 {
+					return Err(MoveError::Invalid);
+				}
 			},
 		};
 		return Ok(())

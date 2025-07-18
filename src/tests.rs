@@ -119,6 +119,70 @@ mod tests {
     }
 
     #[test]
+    fn valid_queen_file_move() {
+        let mut game = Game::new(3600);
+        let mut board = game.board;
+        let chess_move = match Move::try_from("Qd1d4") {
+            Ok(cm) => cm,
+            Err(err) => panic!("{}", err),
+        };
+        let player = &mut game.players.0;
+        board.squares[1][3].piece = None;
+        print!("{}", board.to_string(player.color.into()));
+        let move_result = board.execute_move(chess_move, player);
+        print!("{}", board.to_string(player.color.into()));
+        assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
+    }
+
+    #[test]
+    fn valid_queen_diag_move() {
+        let mut game = Game::new(3600);
+        let mut board = game.board;
+        let chess_move = match Move::try_from("Qd1b3") {
+            Ok(cm) => cm,
+            Err(err) => panic!("{}", err),
+        };
+        let player = &mut game.players.0;
+        board.squares[1][2].piece = None;
+        print!("{}", board.to_string(player.color.into()));
+        let move_result = board.execute_move(chess_move, player);
+        print!("{}", board.to_string(player.color.into()));
+        assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
+    }
+
+    #[test]
+    fn valid_king_file_move() {
+        let mut game = Game::new(3600);
+        let mut board = game.board;
+        let chess_move = match Move::try_from("Ke1e2") {
+            Ok(cm) => cm,
+            Err(err) => panic!("{}", err),
+        };
+        let player = &mut game.players.0;
+        board.squares[1][4].piece = None;
+        print!("{}", board.to_string(player.color.into()));
+        let move_result = board.execute_move(chess_move, player);
+        print!("{}", board.to_string(player.color.into()));
+        assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
+    }
+
+    #[test]
+    fn valid_king_diag_move() {
+        let mut game = Game::new(3600);
+        let mut board = game.board;
+        let chess_move = match Move::try_from("Ke1d2") {
+            Ok(cm) => cm,
+            Err(err) => panic!("{}", err),
+        };
+        let player = &mut game.players.0;
+        board.squares[1][3].piece = None;
+        print!("{}", board.to_string(player.color.into()));
+        let move_result = board.execute_move(chess_move, player);
+        print!("{}", board.to_string(player.color.into()));
+        assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
+    }
+
+    #[test]
     fn promotion() {
         let mut game = Game::new(3600);
         let mut board = game.board;
