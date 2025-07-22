@@ -73,61 +73,44 @@ impl Board {
 		if valid.is_err() {return valid;}
 		let mut piece_type = chess_move.piece_type;
 		match chess_move.move_type {
-			MoveType::CastleKingSide | MoveType::CastleQueenSide => player.remove_castling_rights(CastlingRights::Both),
 			MoveType::Promotion => piece_type = chess_move.promotion.unwrap(),
 			_ => {}
 		};
+		let (home_rank, pawn_rank, promote_rank) = match player.color {
+			Color::White => (Rank::One, Rank::Two, Rank::Eight),
+			Color::Black => (Rank::Eight, Rank::Seven, Rank::One),
+		};
 		let (rank_diff, file_diff) = (
-			(chess_move.to.rank - chess_move.from.rank).abs() as u8,
-			(chess_move.to.file - chess_move.from.file).abs() as u8
+			(chess_move.to.rank - chess_move.from.rank),
+			(chess_move.to.file - chess_move.from.file)
 		);
+		if piece_type != PieceType::Pawn {
+			self.can_passant = None;
+		}
 		match piece_type {
 			PieceType::Pawn => {
-				let starting_rank = match player.color {
-					Color::White => Rank::Two,
-					Color::Black => Rank::Seven,
-				};
 				if self.can_passant.is_some() {
-					let passant_pawn_coord = match player.color {
-						Color::White => Coordinate {
-							rank: Rank::try_from(chess_move.to.rank as usize - 1).unwrap(),
-							file: chess_move.to.file,
-						},
-						Color::Black => Coordinate {
-							rank: Rank::try_from(chess_move.to.rank as usize + 1).unwrap(),
-							file: chess_move.to.file,
-						},
+					let passant_pawn_coord = Coordinate {
+						rank: chess_move.from.rank,
+						file: chess_move.to.file
 					};
 					if chess_move.to == self.can_passant.unwrap() {
 						self.get_square_mut(passant_pawn_coord).piece = None;
 					}
 				}
-				if chess_move.from.rank == starting_rank && rank_diff == 2 {
-					self.can_passant = match player.color {
-						Color::White => Some(Coordinate {
-							rank: Rank::try_from(chess_move.from.rank + 1u8).unwrap(),
-							file: chess_move.from.file,
-						}),
-						Color::Black => Some(Coordinate {
-							rank: Rank::try_from(chess_move.from.rank - 1u8).unwrap(),
-							file: chess_move.from.file,
-						}),
-					};
+				if chess_move.from.rank == pawn_rank && rank_diff.abs() == 2 {
+					self.can_passant = Some(Coordinate {
+						rank: chess_move.from.rank.forward(1, player.color).unwrap(),
+						file: chess_move.from.file
+					});
 				}
 			},
 			PieceType::Bishop => {
-				self.can_passant = None;
 			},
 			PieceType::Knight => {
-				self.can_passant = None;
 			},
 			PieceType::Rook => {
-				self.can_passant = None;
-				let starting_rank = match player.color {
-					Color::White => Rank::One,
-					Color::Black => Rank::Eight,
-				};
-				if chess_move.from.rank == starting_rank {
+				if chess_move.from.rank == home_rank {
 					match chess_move.from.file {
 							File::A => player.remove_castling_rights(CastlingRights::Queen),
 							File::H => player.remove_castling_rights(CastlingRights::King),
@@ -136,11 +119,35 @@ impl Board {
 				}
 			},
 			PieceType::Queen => {
-				self.can_passant = None;
 			},
 			PieceType::King => {
-				self.can_passant = None;
+				if chess_move.from.rank == home_rank {
+					player.remove_castling_rights(CastlingRights::Both);
+				}
 			},
+		}
+		match chess_move.move_type {
+			MoveType::CastleKingSide => {
+				self.get_square_mut(Coordinate {
+					rank: home_rank,
+					file: File::H
+				}).piece = None;
+				self.get_square_mut(Coordinate {
+					rank: home_rank,
+					file: File::F
+				}).piece = Some(Piece::new(player.color, PieceType::Rook));
+			},
+			MoveType::CastleQueenSide => {
+				self.get_square_mut(Coordinate {
+					rank: home_rank,
+					file: File::A
+				}).piece = None;
+				self.get_square_mut(Coordinate {
+					rank: home_rank,
+					file: File::D
+				}).piece = Some(Piece::new(player.color, PieceType::Rook));
+			},
+			_ => {}
 		}
 		self.get_square_mut(chess_move.from).piece = None;
 		self.get_square_mut(chess_move.to).piece = Some(Piece::new(player.color, piece_type));
@@ -174,10 +181,45 @@ impl Board {
 		);
 		match chess_move.move_type {
 			MoveType::CastleKingSide => {
-				
+				match player.castling_rights {
+					CastlingRights::Both | CastlingRights::King => {
+						let (f_clear, g_clear) = (self.get_square(Coordinate {
+							file: File::F,
+							rank: home_rank
+						}).piece.is_none(), self.get_square(Coordinate {
+							file: File::G,
+							rank: home_rank
+						}).piece.is_none());
+						if !f_clear || !g_clear {
+							return Err(MoveError::Blocked);
+						}
+					},
+					_ => {
+						return Err(MoveError::CastlingRights)
+					},
+				}
 			},
 			MoveType::CastleQueenSide => {
-
+				match player.castling_rights {
+					CastlingRights::Both | CastlingRights::Queen => {
+						let (b_clear, c_clear, d_clear) = (self.get_square(Coordinate {
+							file: File::B,
+							rank: home_rank
+						}).piece.is_none(), self.get_square(Coordinate {
+							file: File::C,
+							rank: home_rank
+						}).piece.is_none(), self.get_square(Coordinate {
+							file: File::D,
+							rank: home_rank
+						}).piece.is_none());
+						if !b_clear || !c_clear || !d_clear {
+							return Err(MoveError::Blocked);
+						}
+					},
+					_ => {
+						return Err(MoveError::CastlingRights)
+					},
+				}
 			},
 			_ => {}
 		}
@@ -292,7 +334,7 @@ impl Board {
 				}
 			},
 			PieceType::King => {
-				if file_diff > 1 || rank_diff > 1 {
+				if (file_diff.abs() > 1 || rank_diff.abs() > 1) && chess_move.move_type == MoveType::Normal {
 					return Err(MoveError::Invalid);
 				}
 			},

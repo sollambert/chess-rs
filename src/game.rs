@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use text_io::read;
 
@@ -56,7 +56,7 @@ impl Game {
 				println!("{}", (*board).to_string(white.color.into()));
 				print!("Enter move for white: ");
 				let white_input: String = read!();
-				let white_move = Move::try_from(white_input.as_str());
+				let white_move = Move::try_from((white_input.as_str(), white.color));
 				match white_move {
 					Ok(chess_move) => {
 						match board.execute_move(&chess_move, white) {
@@ -93,7 +93,7 @@ impl Game {
 				println!("{}", (*board).to_string(black.color.into()));
 				print!("Enter move for black: ");
 				let black_input: String = read!();
-				let black_move = Move::try_from(black_input.as_str());
+				let black_move = Move::try_from((black_input.as_str(), black.color));
 				match black_move {
 					Ok(chess_move) => {
 						match board.execute_move(&chess_move, black) {
@@ -188,10 +188,10 @@ pub struct Move {
 	pub is_mate: bool,
 }
 
-impl TryFrom<&str> for Move {
+impl TryFrom<(&str, Color)> for Move {
     type Error = &'static str;
 
-	fn try_from(value: &str) -> Result<Self, Self::Error> {
+	fn try_from((value, color): (&str, Color)) -> Result<Self, Self::Error> {
 		let chars = value.as_bytes();
 		let piece_type = match PieceType::try_from(char::from_u32(chars[0] as u32).unwrap()) {
 			Ok(pt) => pt,
@@ -210,15 +210,68 @@ impl TryFrom<&str> for Move {
 			},
 			_ => None
 		};
-		let from: Coordinate = if piece_type == PieceType::Pawn {
-			Coordinate::from((chars[0] as char, chars[1] as char))
-		} else {
-			Coordinate::from((chars[1] as char, chars[2] as char))
-		};
-		let to: Coordinate = if piece_type == PieceType::Pawn {
-			Coordinate::from((chars[2] as char, chars[3] as char))
-		} else {
-			Coordinate::from((chars[3] as char, chars[4] as char))
+		let (from, to) = match move_type {
+			MoveType::CastleKingSide => {
+				match color {
+					Color::White => {
+						(Coordinate {
+							rank: Rank::One,
+							file: File::E
+						},
+						Coordinate {
+							rank: Rank::One,
+							file: File::G
+						})
+					},
+					Color::Black => {
+						(Coordinate {
+							rank: Rank::Eight,
+							file: File::E
+						},
+						Coordinate {
+							rank: Rank::Eight,
+							file: File::G
+						})
+					},
+				}
+			},
+			MoveType::CastleQueenSide => {
+				match color {
+					Color::White => {
+						(Coordinate {
+							rank: Rank::One,
+							file: File::E
+						},
+						Coordinate {
+							rank: Rank::One,
+							file: File::C
+						})
+					},
+					Color::Black => {
+						(Coordinate {
+							rank: Rank::Eight,
+							file: File::E
+						},
+						Coordinate {
+							rank: Rank::Eight,
+							file: File::C
+						})
+					},
+				}
+			},
+			_ => {
+				if piece_type == PieceType::Pawn {
+					(
+						Coordinate::from((chars[0] as char, chars[1] as char)),
+						Coordinate::from((chars[2] as char, chars[3] as char))
+					)
+				} else {
+					(
+						Coordinate::from((chars[1] as char, chars[2] as char)),
+						Coordinate::from((chars[3] as char, chars[4] as char))
+					)
+				}
+			}
 		};
 		let chess_move = Move {
 			notation: value.to_string(),
@@ -258,7 +311,7 @@ pub enum MoveError {
 	OutOfBounds,
 	PawnNoCapture,
 	PromotionRank,
-	
+	CastlingRights,
 }
 
 impl MoveError {
@@ -272,6 +325,7 @@ impl MoveError {
 			MoveError::PawnNoCapture => "No opposing piece at destination!",
 			MoveError::PromotionRank => "Cannot promote on this rank!",
 			MoveError::Blocked => "Movement is blocked!",
+			MoveError::CastlingRights => "Castling rights are invalid!",
 		}
 	}
 }
@@ -285,12 +339,23 @@ pub enum MoveType {
 	Promotion
 }
 
+impl Display for MoveType {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", match self {
+			MoveType::Normal => "Normal",
+			MoveType::CastleKingSide => "CastleKingSide",
+			MoveType::CastleQueenSide => "CastleQueenSide",
+			MoveType::Promotion => "Promotion",
+		})
+	}
+}
+
 impl TryFrom<&str> for MoveType {
 	type Error = MoveError;
 
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
 		let promotion = PieceType::try_from(value.chars().last().unwrap());
-		if let Ok(_) = promotion { return Ok(MoveType::Promotion) };
+		if let Ok(piece_type) = promotion { if piece_type != PieceType::King {return Ok(MoveType::Promotion)}};
 		if value.contains("O-O-O") {
 			return Ok(MoveType::CastleQueenSide);
 		}
