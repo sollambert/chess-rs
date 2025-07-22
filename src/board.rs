@@ -1,4 +1,4 @@
-use std::{array::from_fn, fmt::Display};
+use std::{array::from_fn, fmt::Display, ops::{Add, Sub}};
 
 use crate::{game::{CastlingRights, Move, MoveError, MoveType, Player}, pieces::{Piece, PieceType}};
 
@@ -77,6 +77,10 @@ impl Board {
 			MoveType::Promotion => piece_type = chess_move.promotion.unwrap(),
 			_ => {}
 		};
+		let (rank_diff, file_diff) = (
+			(chess_move.to.rank - chess_move.from.rank).abs() as u8,
+			(chess_move.to.file - chess_move.from.file).abs() as u8
+		);
 		match piece_type {
 			PieceType::Pawn => {
 				let starting_rank = match player.color {
@@ -98,14 +102,14 @@ impl Board {
 						self.get_square_mut(passant_pawn_coord).piece = None;
 					}
 				}
-				if chess_move.from.rank == starting_rank && i32::abs(chess_move.from.rank as i32 - chess_move.to.rank as i32) == 2 {
+				if chess_move.from.rank == starting_rank && rank_diff == 2 {
 					self.can_passant = match player.color {
 						Color::White => Some(Coordinate {
-							rank: Rank::try_from(chess_move.from.rank as usize + 1).unwrap(),
+							rank: Rank::try_from(chess_move.from.rank + 1u8).unwrap(),
 							file: chess_move.from.file,
 						}),
 						Color::Black => Some(Coordinate {
-							rank: Rank::try_from(chess_move.from.rank as usize - 1).unwrap(),
+							rank: Rank::try_from(chess_move.from.rank - 1u8).unwrap(),
 							file: chess_move.from.file,
 						}),
 					};
@@ -160,28 +164,34 @@ impl Board {
 				return Err(MoveError::Blocked);
 			}
 		}
+		let (home_rank, pawn_rank, promote_rank) = match player.color {
+			Color::White => (Rank::One, Rank::Two, Rank::Eight),
+			Color::Black => (Rank::Eight, Rank::Seven, Rank::One),
+		};
+		let (rank_diff, file_diff) = (
+			chess_move.to.rank - chess_move.from.rank,
+			chess_move.to.file - chess_move.from.file
+		);
+		match chess_move.move_type {
+			MoveType::CastleKingSide => {
+				
+			},
+			MoveType::CastleQueenSide => {
+
+			},
+			_ => {}
+		}
 		match chess_move.piece_type {
 			PieceType::Pawn => {
 				let file_adjacent = (chess_move.to.file as usize).abs_diff(chess_move.from.file as usize) == 1;
 				let same_file = chess_move.to.file == chess_move.from.file;
 				let passantable = self.can_passant.is_some() && chess_move.to == self.can_passant.unwrap();
-				let promote_rank = match player.color {
-						Color::White => Rank::Eight,
-						Color::Black => Rank::One,
-					};
-				let forward_one = match player.color {
-					Color::White => chess_move.to.rank as usize == chess_move.from.rank as usize + 1,
-					Color::Black => chess_move.to.rank as usize == chess_move.from.rank as usize - 1,
-				};
-				let forward_two = match player.color {
-					Color::White => chess_move.to.rank as usize == chess_move.from.rank as usize + 2,
-					Color::Black => chess_move.to.rank as usize == chess_move.from.rank as usize - 2,
-				};
-				let on_starting_rank = match player.color {
-					Color::White => chess_move.from.rank == Rank::Two,
-					Color::Black => chess_move.from.rank == Rank::Seven,
-				};
-				if !forward_one && !(forward_two && on_starting_rank) {
+				let forward_rank = chess_move.from.rank.forward(rank_diff.abs() as u8, player.color).expect("Error getting diff");
+				if forward_rank != chess_move.to.rank {
+					return Err(MoveError::Invalid);
+				}
+				let on_starting_rank = chess_move.from.rank == pawn_rank;
+				if !rank_diff == 1 && !(rank_diff.abs() == 2 && on_starting_rank) {
 					return Err(MoveError::Invalid);
 				}
 				if file_adjacent {
@@ -201,19 +211,14 @@ impl Board {
 				}
 			},
 			PieceType::Bishop => {
-				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
-				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
 				let direction: (bool, bool) = (file_diff > 0, rank_diff > 0);
-				if file_diff != rank_diff && file_diff != rank_diff * -1 {
+				if file_diff != rank_diff {
 					return Err(MoveError::Invalid);
 				}
-				for distance in 1..i32::abs(file_diff) {
+				for distance in 1..file_diff {
 					let file_distance = if direction.0 { distance } else { distance * -1 };
 					let rank_distance = if direction.1 { distance } else { distance * -1 };
-					let check_coord = Coordinate {
-						file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
-						rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
-					};
+					let check_coord = chess_move.from + (file_distance, rank_distance);
 					let check_occupied = self.get_square(check_coord).piece.is_some();
 					if check_occupied {
 						return Err(MoveError::Blocked);
@@ -222,26 +227,11 @@ impl Board {
 			},
 			PieceType::Knight => {
 				let valid_diffs = [[2, 1], [1, 2], [-1, 2] ,[-2, 1], [-2, -1], [-1, -2], [1, -2], [2, -1]];
-				let valid_coords: Vec<Coordinate> = valid_diffs.iter().map(|diff| {
-					let file_result = File::try_from((chess_move.from.file as usize as i32 + diff[0]) as usize);
-					let rank_result = Rank::try_from((chess_move.from.rank as usize as i32 + diff[1]) as usize);
-					if file_result.is_err() || rank_result.is_err() {
-						return None;
-					}
-					let file = file_result.unwrap();
-					let rank = rank_result.unwrap();
-					let coord = Coordinate {
-						file,
-						rank
-					};
-					Some(coord)
-				}).filter(|coord| coord.is_some()).map(|coord| coord.unwrap()).collect();
-				let target_coord = valid_coords.iter().find(|coord| **coord == chess_move.to);
-				if target_coord.is_none() {return Err(MoveError::Invalid)}
+				if !valid_diffs.contains(&[rank_diff, file_diff]) {
+					return Err(MoveError::Invalid);
+				}
 			},
 			PieceType::Rook => {
-				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
-				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
 				let direction: (bool, bool) = (file_diff != 0, file_diff > 0 || rank_diff > 0 );
 				if file_diff * rank_diff != 0 {
 					return Err(MoveError::Invalid);
@@ -249,26 +239,21 @@ impl Board {
 				let check_coord = |distance| {
 					let file_distance = if direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
 					let rank_distance = if !direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
-					let coord = Coordinate {
-						file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
-						rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
-					};
+					let coord = chess_move.from + (file_distance, rank_distance);
 					self.get_square(coord).piece.is_some()
 				};
-				for distance in 1..i32::abs(file_diff) {
-					if check_coord(distance) {
+				for distance in 1..file_diff {
+					if check_coord(distance as i8) {
 						return Err(MoveError::Blocked);
 					}
 				}
-				for distance in 1..i32::abs(rank_diff) {
-					if check_coord(distance) {
+				for distance in 1..rank_diff {
+					if check_coord(distance as i8) {
 						return Err(MoveError::Blocked);
 					}
 				}
 			},
 			PieceType::Queen => {
-				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
-				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
 				if file_diff == 0 || rank_diff == 0 {
 					let direction: (bool, bool) = (file_diff != 0, file_diff > 0 || rank_diff > 0 );
 					if file_diff * rank_diff != 0 {
@@ -277,34 +262,28 @@ impl Board {
 					let check_coord = |distance| {
 						let file_distance = if direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
 						let rank_distance = if !direction.0 { if direction.1 { distance } else { distance * -1 }} else { 0 };
-						let coord = Coordinate {
-							file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
-							rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
-						};
+						let coord = chess_move.from + (file_distance, rank_distance);
 						self.get_square(coord).piece.is_some()
 					};
-					for distance in 1..i32::abs(file_diff) {
+					for distance in 1..file_diff {
 						if check_coord(distance) {
 							return Err(MoveError::Blocked);
 						}
 					}
-					for distance in 1..i32::abs(rank_diff) {
+					for distance in 1..rank_diff {
 						if check_coord(distance) {
 							return Err(MoveError::Blocked);
 						}
 					}
 				} else {
 					let direction: (bool, bool) = (file_diff > 0, rank_diff > 0);
-					if file_diff != rank_diff && file_diff != rank_diff * -1 {
+					if file_diff != rank_diff {
 						return Err(MoveError::Invalid);
 					}
-					for distance in 1..i32::abs(file_diff) {
+					for distance in 1..file_diff {
 						let file_distance = if direction.0 { distance } else { distance * -1 };
 						let rank_distance = if direction.1 { distance } else { distance * -1 };
-						let check_coord = Coordinate {
-							file: File::try_from((chess_move.from.file as usize as i32 + file_distance) as usize).unwrap(),
-							rank: Rank::try_from((chess_move.from.rank as usize as i32 + rank_distance) as usize).unwrap()
-						};
+						let check_coord = chess_move.from + (file_distance, rank_distance);
 						let check_occupied = self.get_square(check_coord).piece.is_some();
 						if check_occupied {
 							return Err(MoveError::Blocked);
@@ -313,8 +292,6 @@ impl Board {
 				}
 			},
 			PieceType::King => {
-				let file_diff: i32 = i32::wrapping_sub((chess_move.to.file as usize) as i32, (chess_move.from.file as usize) as i32);
-				let rank_diff: i32 = i32::wrapping_sub((chess_move.to.rank as usize) as i32, (chess_move.from.rank as usize) as i32);
 				if file_diff > 1 || rank_diff > 1 {
 					return Err(MoveError::Invalid);
 				}
@@ -420,6 +397,48 @@ impl Default for Coordinate {
 	}
 }
 
+impl Add for Coordinate {
+	type Output = (u8, u8);
+
+	fn add(self, rhs: Self) -> Self::Output {
+		(self.rank + rhs.rank, self.file + rhs.file)
+	}
+}
+
+impl Sub for Coordinate {
+	type Output = (i8, i8);
+
+	fn sub(self, rhs: Self) -> Self::Output {
+		(self.rank - rhs.rank, self.file - rhs.file)
+	}
+}
+
+impl Add<(i8, i8)> for Coordinate {
+	type Output = Self;
+
+	fn add(self, rhs: (i8, i8)) -> Self::Output {
+		let rank = Rank::try_from(self.rank + rhs.0).expect("Error converting to rank!");
+		let file = File::try_from(self.rank + rhs.1).expect("Error converting to rank!");
+		Self {
+			rank,
+			file
+		}
+	}
+}
+
+impl Sub<(i8, i8)> for Coordinate {
+	type Output = Self;
+
+	fn sub(self, rhs: (i8, i8)) -> Self::Output {
+		let rank = Rank::try_from(self.rank - rhs.0).expect("Error converting to rank!");
+		let file = File::try_from(self.rank - rhs.1).expect("Error converting to rank!");
+		Self {
+			rank,
+			file
+		}
+	}
+}
+
 impl Display for Coordinate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}", <File as Into<char>>::into(self.file), <Rank as Into<char>>::into(self.rank))
@@ -452,7 +471,7 @@ impl TryFrom<u8> for File {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
+        match value % 8{
             0 => Ok(File::A),
             1 => Ok(File::B),
             2 => Ok(File::C),
@@ -466,6 +485,57 @@ impl TryFrom<u8> for File {
     }
 }
 
+impl Add for File {
+	type Output = u8;
+
+	fn add(self, rhs: Self) -> Self::Output {
+		return self as u8 + rhs as u8;
+	}
+
+}
+
+impl Sub for File {
+	type Output = i8;
+
+	fn sub(self, rhs: Self) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
+impl Add<u8> for File {
+	type Output = u8;
+
+	fn add(self, rhs: u8) -> Self::Output {
+		return self as u8 + rhs;
+	}
+
+}
+
+impl Sub<u8> for File {
+	type Output = i8;
+
+	fn sub(self, rhs: u8) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
+impl Add<i8> for File {
+	type Output = i8;
+
+	fn add(self, rhs: i8) -> Self::Output {
+		return self as i8 + rhs;
+	}
+
+}
+
+impl Sub<i8> for File {
+	type Output = i8;
+
+	fn sub(self, rhs: i8) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
 macro_rules! impl_try_from_file {
     ($($t:ty),*) => {
         $(
@@ -473,13 +543,7 @@ macro_rules! impl_try_from_file {
                 type Error = &'static str;
 
                 fn try_from(value: $t) -> Result<Self, Self::Error> {
-                    // Convert to u8 safely, and then reuse the existing implementation
-                    if value >= 0 && value <= 7 {
-                        // `as u8` is safe here due to range check
-                        File::try_from(value as u8)
-                    } else {
-                        Err("Value out of range for File (0–7)")
-                    }
+					File::try_from(value as u8)
                 }
             }
         )*
@@ -534,6 +598,15 @@ pub enum Rank {
     Eight
 }
 
+impl Rank {
+	fn forward(self, distance: u8, color: Color) -> Result<Rank, &'static str> {
+		match color {
+			Color::White => Self::try_from(self + distance),
+			Color::Black => Self::try_from(self - distance),
+		}
+	} 
+}
+
 impl Into<char> for Rank {
     fn into(self) -> char {
         match self {
@@ -549,11 +622,62 @@ impl Into<char> for Rank {
     }
 }
 
+impl Add for Rank {
+	type Output = u8;
+
+	fn add(self, rhs: Self) -> Self::Output {
+		return self as u8 + rhs as u8;
+	}
+
+}
+
+impl Sub for Rank {
+	type Output = i8;
+
+	fn sub(self, rhs: Self) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
+impl Add<u8> for Rank {
+	type Output = u8;
+
+	fn add(self, rhs: u8) -> Self::Output {
+		return self as u8 + rhs;
+	}
+
+}
+
+impl Sub<u8> for Rank {
+	type Output = i8;
+
+	fn sub(self, rhs: u8) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
+impl Add<i8> for Rank {
+	type Output = i8;
+
+	fn add(self, rhs: i8) -> Self::Output {
+		return self as i8 + rhs;
+	}
+
+}
+
+impl Sub<i8> for Rank {
+	type Output = i8;
+
+	fn sub(self, rhs: i8) -> Self::Output {
+		return self as i8 - rhs as i8;
+	}
+}
+
 impl TryFrom<u8> for Rank {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
+        match value % 8 {
             0 => Ok(Rank::One),
             1 => Ok(Rank::Two),
             2 => Ok(Rank::Three),
@@ -574,13 +698,7 @@ macro_rules! impl_try_from_rank {
                 type Error = &'static str;
 
                 fn try_from(value: $t) -> Result<Self, Self::Error> {
-                    // Convert to u8 safely, and then reuse the existing implementation
-                    if value >= 0 && value <= 7 {
-                        // `as u8` is safe here due to range check
-                        Rank::try_from(value as u8)
-                    } else {
-                        Err("Value out of range for Rank (0–7)")
-                    }
+					Rank::try_from(value as u8)
                 }
             }
         )*

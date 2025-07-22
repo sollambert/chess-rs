@@ -35,6 +35,7 @@ impl Game {
 	}
 	pub fn start(&mut self) {
 		loop {
+			println!("{}", self.turns_to_string());
 			let mut new_turn = Turn(None, None);
 			let board = &mut self.board;
 			let (white, black) = &mut self.players;
@@ -113,7 +114,6 @@ impl Game {
 				}
 			}
 			self.turns.push(new_turn);
-			println!("{}", self.turns_to_string());
 		}
 		println!("{} wins the game!", self.winner.unwrap());
 	}

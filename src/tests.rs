@@ -28,7 +28,7 @@ mod tests {
         };
         let player = &mut game.players.0;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -43,7 +43,7 @@ mod tests {
         };
         let player = &mut game.players.0;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         print!("Can Passant: {}", board.can_passant.unwrap());
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
@@ -64,9 +64,9 @@ mod tests {
         let player = &mut game.players.0;
         let player2 = &mut game.players.1;
         board.squares[3][3].piece = Some(Piece::new(player2.color, PieceType::Pawn));
-        let _ = board.execute_move(chess_move, player);
+        let _ = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move2, player2);
+        let move_result = board.execute_move(&chess_move2, player2);
         print!("{}", board.to_string(player2.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -82,7 +82,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][1].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -97,7 +97,7 @@ mod tests {
         };
         let player = &mut game.players.0;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -113,7 +113,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][0].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -129,7 +129,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][3].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -145,7 +145,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][2].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -161,7 +161,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][4].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -177,7 +177,7 @@ mod tests {
         let player = &mut game.players.0;
         board.squares[1][3].piece = None;
         print!("{}", board.to_string(player.color.into()));
-        let move_result = board.execute_move(chess_move, player);
+        let move_result = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(move_result.is_ok(), "{}", move_result.unwrap_err().as_str());
     }
@@ -197,7 +197,7 @@ mod tests {
             piece_type: PieceType::Pawn,
         });
         print!("{}", board.to_string(player.color.into()));
-        let executed_move = board.execute_move(chess_move, player);
+        let executed_move = board.execute_move(&chess_move, player);
         print!("{}", board.to_string(player.color.into()));
         assert!(executed_move.is_ok(), "{}", executed_move.unwrap_err().as_str());
     }
