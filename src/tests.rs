@@ -1,6 +1,17 @@
 #[cfg(test)]
 mod tests {
+    use text_io::read;
+
     use crate::{board::{Board, BoardPerspective, File, Rank}, game::{Game, Move}, pieces::{Piece, PieceType}};
+
+
+    #[test]
+    fn run_game() {
+        print!("Welcome to Chess-rs, please enter desired game time in seconds:");
+        let time: u32 = read!();
+        let mut game = Game::new(time);
+        game.start()
+    }
 
     #[test]
     fn init_board() {
