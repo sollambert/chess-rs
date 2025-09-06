@@ -2,10 +2,10 @@ use text_io::read;
 
 use crate::game::Game;
 
-mod board;
-mod game;
-mod pieces;
-mod tests;
+pub mod board;
+pub mod game;
+pub mod pieces;
+pub mod tests;
 
 
 fn main() {

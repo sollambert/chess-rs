@@ -356,10 +356,10 @@ impl TryFrom<&str> for MoveType {
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
 		let promotion = PieceType::try_from(value.chars().last().unwrap());
 		if let Ok(piece_type) = promotion { if piece_type != PieceType::King {return Ok(MoveType::Promotion)}};
-		if value.contains("O-O-O") {
+		if value.contains(QUEENSIDE_CASTLE) {
 			return Ok(MoveType::CastleQueenSide);
 		}
-		if value.contains("O-O") {
+		if value.contains(KINGSIDE_CASTLE) {
 			return Ok(MoveType::CastleKingSide);
 		}
 		let piece_type = PieceType::try_from(value.chars().next().unwrap());

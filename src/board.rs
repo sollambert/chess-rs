@@ -76,11 +76,11 @@ impl Board {
 			MoveType::Promotion => piece_type = chess_move.promotion.unwrap(),
 			_ => {}
 		};
-		let (home_rank, pawn_rank, promote_rank) = match player.color {
+		let (home_rank, pawn_rank, _promote_rank) = match player.color {
 			Color::White => (Rank::One, Rank::Two, Rank::Eight),
 			Color::Black => (Rank::Eight, Rank::Seven, Rank::One),
 		};
-		let (rank_diff, file_diff) = (
+		let (rank_diff, _file_diff) = (
 			(chess_move.to.rank - chess_move.from.rank),
 			(chess_move.to.file - chess_move.from.file)
 		);
@@ -254,7 +254,8 @@ impl Board {
 			},
 			PieceType::Bishop => {
 				let direction: (bool, bool) = (file_diff > 0, rank_diff > 0);
-				if file_diff != rank_diff {
+				if file_diff.abs() != rank_diff.abs() {
+					println!("{}{}", file_diff, rank_diff);
 					return Err(MoveError::Invalid);
 				}
 				for distance in 1..file_diff {
@@ -319,7 +320,7 @@ impl Board {
 					}
 				} else {
 					let direction: (bool, bool) = (file_diff > 0, rank_diff > 0);
-					if file_diff != rank_diff {
+					if file_diff.abs() != rank_diff.abs() {
 						return Err(MoveError::Invalid);
 					}
 					for distance in 1..file_diff {
@@ -489,6 +490,7 @@ impl Display for Coordinate {
 
 impl From<(char, char)> for Coordinate {
 	fn from(value: (char, char)) -> Self {
+		println!("{}{}", value.0, value.1);
 		Self {
 			file: File::try_from(value.0).unwrap(),
 			rank: Rank::try_from(value.1).unwrap()
